@@ -61,21 +61,26 @@ jobs:
             exit 1
           fi
           
-          mkdir -p extracted/$repo_folder/.tekton
-          cp -r "$repo_folder/.tekton/"* "extracted/$repo_folder/.tekton/"
+          # Extract and modify files
+          mkdir -p extracted/.tekton
+          cp -r "$repo_folder/.tekton/"* "extracted/.tekton/"
           
-          echo "Files copied to extracted/$repo_folder/.tekton:"
-          ls -l extracted/$repo_folder/.tekton/
+          echo "Files copied to extracted/.tekton:"
+          ls -l extracted/.tekton/
           
-          # Copy into target repo
-          cp -r extracted/$repo_folder/.tekton target-repo/$repo_folder/
+          # ✅ Ensure .tekton exists in target repo root
+          mkdir -p target-repo/.tekton
+          
+          # ✅ Copy to the root-level .tekton folder
+          cp -r extracted/.tekton/* target-repo/.tekton/
           
           cd target-repo
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$repo_folder/.tekton"
+          git add .tekton
           git commit -m "Update Tekton output-image tags to version v2.x.1"
           git push origin tekton-update-v2.x.1
+
 
 
       - name: Create Pull Request
