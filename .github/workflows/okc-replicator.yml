@@ -99,11 +99,15 @@ jobs:
 
       - name: Create Pull Request
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ inputs.repository }}
+          BASE: ${{ inputs.release_branch }}
+          HEAD: ${{ github.repository_owner }}:tekton-update-${{ inputs.version }}
+          VERSION: ${{ inputs.version }}
+          OKC_FOLDER: ${{ inputs.okc_folder }}
         run: |
           gh pr create \
-            --repo "${{ inputs.repository }}" \
-            --base "${{ inputs.release_branch }}" \
-            --head "${{ github.repository_owner }}:tekton-update-${{ inputs.version }}" \
-            --title "Update Tekton files to version ${{ inputs.version }}" \
-            --body "This PR updates the \`output-image\` tags in \`${{ inputs.okc_folder }}/.tekton/\` to version \`${{ inputs.version}\`."
+            --repo "$REPO" \
+            --base "$BASE" \
+            --head "$HEAD" \
+            --title "Update Tekton files to version $VERSION" \
+            --body "This PR updates the \`output-image\` tags in \`$OKC_FOLDER/.tekton/\` to version \`$VERSION\`."
