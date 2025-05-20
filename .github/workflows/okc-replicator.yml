@@ -15,27 +15,29 @@ on:
         description: 'New version identifier (e.g., v2.29.0)'
         required: true
         type: string
+      okc_folder:
+        description: 'Select folder inside OKC repo containing Tekton files'
+        required: true
+        type: choice
+        options:
+          - data-science-pipelines
+          - odh-model-controller
+          # Add all valid folder names here
 
 jobs:
   create-pr:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Replace with a PAT if needed
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout OKC repository
         uses: actions/checkout@v4
 
-      - name: Extract folder name from input repo
-        id: extract-folder
-        run: |
-          # Extract repo name like "abc-repo" → "abc"
-          folder=$(basename "${{ inputs.repository }}" | cut -d'-' -f1)
-          echo "folder_name=$folder" >> "$GITHUB_OUTPUT"
-
       - name: Prepare Tekton files
         run: |
-          repo_folder="${{ steps.extract-folder.outputs.folder_name }}"
+          repo_folder="${{ inputs.okc_folder }}"
+          echo "Using OKC folder: $repo_folder"
           mkdir -p extracted/$repo_folder/.tekton
           cp -r "$repo_folder/.tekton/"* "extracted/$repo_folder/.tekton/"
 
@@ -52,7 +54,7 @@ jobs:
 
       - name: Copy and commit updated Tekton files
         run: |
-          repo_folder="${{ steps.extract-folder.outputs.folder_name }}"
+          repo_folder="${{ inputs.okc_folder }}"
           cp -r ../extracted/$repo_folder/.tekton target-repo/$repo_folder/
 
           cd target-repo
@@ -69,4 +71,4 @@ jobs:
             --base "${{ inputs.release_branch }}" \
             --head "tekton-update-${{ inputs.version }}" \
             --title "Update Tekton files to version ${{ inputs.version }}" \
-            --body "This PR updates the \`output-image\` tags in \`${{ steps.extract-folder.outputs.folder_name }}/.tekton/\` to version \`${{ inputs.version }}\`."
+            --body "This PR updates the \`output-image\` tags in \`${{ inputs.okc_folder }}/.tekton/\` to version \`${{ inputs.version }}\`."
