@@ -23,7 +23,7 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/open-data-hub-tenant/odh-model-controller:{{revision}}
+    value: quay.io/redhat-user-workloads/open-data-hub-tenant/odh-model-controller:v2.x.1
   - name: dockerfile
     value: Containerfile
   - name: path-context
