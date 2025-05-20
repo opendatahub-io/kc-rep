@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       version:
-        description: 'New version identifier (e.g., 2.9.0)'
+        description: 'New version identifier (e.g., v2.29.0)'
         required: true
         type: string
 
@@ -39,8 +39,9 @@ jobs:
           mkdir -p extracted/$repo_folder/.tekton
           cp -r "$repo_folder/.tekton/"* "extracted/$repo_folder/.tekton/"
 
+          # Replace tag in output-image value with the provided version
           find "extracted/$repo_folder/.tekton/" -type f -name "*.yaml" | while read file; do
-            sed -i "s/version: .*/version: \"${{ inputs.version }}\"/" "$file"
+            sed -i -E 's|(name:\s*output-image\s*[\r\n]+[ \t]*value:\s*[^:]+:).*|\1'"${{ inputs.version }}"'|' "$file"
           done
 
       - name: Clone target repository
@@ -58,7 +59,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "$repo_folder/.tekton"
-          git commit -m "Update Tekton files for version ${{ inputs.version }}"
+          git commit -m "Update Tekton output-image tags to version ${{ inputs.version }}"
           git push origin tekton-update-${{ inputs.version }}
 
       - name: Create Pull Request
@@ -68,4 +69,4 @@ jobs:
             --base "${{ inputs.release_branch }}" \
             --head "tekton-update-${{ inputs.version }}" \
             --title "Update Tekton files to version ${{ inputs.version }}" \
-            --body "This PR updates the Tekton files in \`${{ steps.extract-folder.outputs.folder_name }}/.tekton/\` to version `${{ inputs.version }}`."
+            --body "This PR updates the \`output-image\` tags in \`${{ steps.extract-folder.outputs.folder_name }}/.tekton/\` to version \`${{ inputs.version }}\`."
