@@ -38,11 +38,17 @@ jobs:
         run: |
           repo_folder="${{ inputs.okc_folder }}"
           echo "Using OKC folder: $repo_folder"
-          mkdir -p extracted/$repo_folder/.tekton
-          cp -r "$repo_folder/.tekton/"* "extracted/$repo_folder/.tekton/"
 
-          # Replace tag in output-image value with the provided version
-          find "extracted/$repo_folder/.tekton/" -type f -name "*.yaml" | while read file; do
+          if [ ! -d "$repo_folder/.tekton" ]; then
+            echo "ERROR: $repo_folder/.tekton does not exist!"
+            exit 1
+          fi
+
+          mkdir -p extracted/.tekton
+          cp -r "$repo_folder/.tekton/"* extracted/.tekton/
+
+          echo "Replacing output-image tag with version: ${{ inputs.version }}"
+          find extracted/.tekton/ -type f -name "*.yaml" | while read file; do
             sed -i -E 's|(name:\s*output-image\s*[\r\n]+[ \t]*value:\s*[^:]+:).*|\1'"${{ inputs.version }}"'|' "$file"
           done
 
@@ -54,40 +60,15 @@ jobs:
 
       - name: Copy and commit updated Tekton files
         run: |
-          repo_folder="odh-model-controller"
-          echo "Checking existence of $repo_folder/.tekton"
-          if [ ! -d "$repo_folder/.tekton" ]; then
-            echo "ERROR: $repo_folder/.tekton does not exist!"
-            exit 1
-          fi
-          
-          # Extract and modify files
-          mkdir -p extracted/.tekton
-          cp -r "$repo_folder/.tekton/"* "extracted/.tekton/"
-          
-          echo "Files copied to extracted/.tekton:"
-          ls -l extracted/.tekton/
-          
-          # ✅ Ensure .tekton exists in target repo root
           mkdir -p target-repo/.tekton
-          
-          # ✅ Copy to the root-level .tekton folder
           cp -r extracted/.tekton/* target-repo/.tekton/
-          
+
           cd target-repo
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           git add .tekton
-          git commit -m "Update Tekton output-image tags to version v2.x.1"
-          git push origin tekton-update-v2.x.1
+          git commit -m "Update Tekton output-image tags to version ${{ inputs.version }}"
+          git push origin tekton-update-${{ inputs.version }}
 
-
-
-      - name: Create Pull Request
-        run: |
-          gh pr create \
-            --repo "${{ inputs.repository }}" \
-            --base "${{ inputs.release_branch }}" \
-            --head "tekton-update-${{ inputs.version }}" \
-            --title "Update Tekton files to version ${{ inputs.version }}" \
-            --body "This PR updates the \`output-image\` tags in \`${{ inputs.okc_folder }}/.tekton/\` to version \`${{ inputs.version }}\`."
+      
