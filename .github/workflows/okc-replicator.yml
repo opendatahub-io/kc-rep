@@ -55,7 +55,17 @@ jobs:
       - name: Copy and commit updated Tekton files
         run: |
           repo_folder="${{ inputs.okc_folder }}"
-          cp -r ../extracted/$repo_folder/.tekton target-repo/$repo_folder/
+          echo "Checking existence of $repo_folder/.tekton"
+          if [ ! -d "$repo_folder/.tekton" ]; then
+            echo "ERROR: $repo_folder/.tekton does not exist!"
+            exit 1
+          fi
+          
+          mkdir -p extracted/$repo_folder/.tekton
+          cp -r "$repo_folder/.tekton/"* "extracted/$repo_folder/.tekton/"
+          
+          echo "Files copied to extracted/$repo_folder/.tekton:"
+          ls -l extracted/$repo_folder/.tekton/
 
           cd target-repo
           git config user.name "github-actions[bot]"
