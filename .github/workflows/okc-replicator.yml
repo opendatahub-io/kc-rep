@@ -32,9 +32,9 @@ jobs:
       contents: write
       pull-requests: write
       repository-projects: write
-
+      
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout OKC repository
@@ -44,20 +44,19 @@ jobs:
         run: |
           repo_folder="${{ inputs.okc_folder }}"
           echo "Using OKC folder: $repo_folder"
-
           if [ ! -d "$repo_folder/.tekton" ]; then
             echo "ERROR: $repo_folder/.tekton does not exist!"
             exit 1
           fi
-
           mkdir -p extracted/.tekton
           cp -r "$repo_folder/.tekton/"* extracted/.tekton/
-
           echo "Replacing output-image tag with version: ${{ inputs.version }}"
           find extracted/.tekton/ -type f -name "*.yaml" | while read file; do
             sed -i -E '/name: output-image/{n; s|(value: .+:)[^[:space:]]+|\1'"${{ inputs.version }}"'|}' "$file"
           done
-
+      - name: Configure Git authentication
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - name: Create branch and commit updates
         run: |
           branch_name="tekton-update-${{ inputs.version }}"
@@ -65,7 +64,7 @@ jobs:
           cd repo-workspace
           
           git init
-          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/opendatahub-io/kc-rep
+          git remote add origin https://github.com/opendatahub-io/kc-rep
           git fetch origin
           
           if git ls-remote --exit-code --heads origin "$branch_name" > /dev/null; then
@@ -95,9 +94,13 @@ jobs:
           git commit -m "Update Tekton output-image tags to version ${{ inputs.version }}"
           git push origin "$branch_name"
 
-      - name: Create Pull Request
+      - name: Authenticate gh CLI
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${GITHUB_TOKEN}" | gh auth login --with-token
+      - name: Create Pull Request
+        env:
           REPO: ${{ inputs.repository }}
           BASE: ${{ inputs.release_branch }}
           HEAD: ${{ github.repository_owner }}:tekton-update-${{ inputs.version }}
