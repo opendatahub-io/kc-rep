@@ -27,6 +27,12 @@ on:
 jobs:
   create-pr:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+      repository-projects: write
+      
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
