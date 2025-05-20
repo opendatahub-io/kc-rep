@@ -1,0 +1,71 @@
+name: OKC Replicator for tekton files
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'Target GitHub repository (e.g., org/abc-repo)'
+        required: true
+        type: string
+      release_branch:
+        description: 'Branch in target repo to merge PR into (e.g., rhoai-2.9)'
+        required: true
+        type: string
+      version:
+        description: 'New version identifier (e.g., 2.9.0)'
+        required: true
+        type: string
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Replace with a PAT if needed
+
+    steps:
+      - name: Checkout OKC repository
+        uses: actions/checkout@v4
+
+      - name: Extract folder name from input repo
+        id: extract-folder
+        run: |
+          # Extract repo name like "abc-repo" → "abc"
+          folder=$(basename "${{ inputs.repository }}" | cut -d'-' -f1)
+          echo "folder_name=$folder" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare Tekton files
+        run: |
+          repo_folder="${{ steps.extract-folder.outputs.folder_name }}"
+          mkdir -p extracted/$repo_folder/.tekton
+          cp -r "$repo_folder/.tekton/"* "extracted/$repo_folder/.tekton/"
+
+          find "extracted/$repo_folder/.tekton/" -type f -name "*.yaml" | while read file; do
+            sed -i "s/version: .*/version: \"${{ inputs.version }}\"/" "$file"
+          done
+
+      - name: Clone target repository
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ inputs.repository }}" target-repo
+          cd target-repo
+          git checkout -b tekton-update-${{ inputs.version }} origin/${{ inputs.release_branch }}
+
+      - name: Copy and commit updated Tekton files
+        run: |
+          repo_folder="${{ steps.extract-folder.outputs.folder_name }}"
+          cp -r ../extracted/$repo_folder/.tekton target-repo/$repo_folder/
+
+          cd target-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$repo_folder/.tekton"
+          git commit -m "Update Tekton files for version ${{ inputs.version }}"
+          git push origin tekton-update-${{ inputs.version }}
+
+      - name: Create Pull Request
+        run: |
+          gh pr create \
+            --repo "${{ inputs.repository }}" \
+            --base "${{ inputs.release_branch }}" \
+            --head "tekton-update-${{ inputs.version }}" \
+            --title "Update Tekton files to version ${{ inputs.version }}" \
+            --body "This PR updates the Tekton files in \`${{ steps.extract-folder.outputs.folder_name }}/.tekton/\` to version `${{ inputs.version }}`."
