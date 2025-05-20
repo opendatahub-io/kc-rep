@@ -55,7 +55,7 @@ jobs:
 
           echo "Replacing output-image tag with version: ${{ inputs.version }}"
           find extracted/.tekton/ -type f -name "*.yaml" | while read file; do
-            sed -i -E 's|(name:\s*output-image\s*[\r\n]+[ \t]*value:\s*[^:]+:).*|\1'"${{ inputs.version }}"'|' "$file"
+            sed -i -E '/name: output-image/{n; s|(value: .+:)[^[:space:]]+|\1'"${{ inputs.version }}"'|}' "$file"
           done
 
       - name: Create branch and commit updates
@@ -98,10 +98,12 @@ jobs:
 
 
       - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr create \
             --repo "${{ inputs.repository }}" \
             --base "${{ inputs.release_branch }}" \
             --head "${{ github.repository_owner }}:tekton-update-${{ inputs.version }}" \
             --title "Update Tekton files to version ${{ inputs.version }}" \
-            --body "This PR updates the \`output-image\` tags in \`${{ inputs.okc_folder }}/.tekton/\` to version \`${{ inputs.version }}\`."
+            --body "This PR updates the \`output-image\` tags in \`${{ inputs.okc_folder }}/.tekton/\` to version \`${{ inputs.version}\`."
