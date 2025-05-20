@@ -58,6 +58,10 @@ jobs:
             sed -i -E '/name: output-image/{n; s|(value: .+:)[^[:space:]]+|\1'"${{ inputs.version }}"'|}' "$file"
           done
 
+      - name: Configure Git authentication
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
       - name: Create branch and commit updates
         run: |
           branch_name="tekton-update-${{ inputs.version }}"
@@ -65,7 +69,7 @@ jobs:
           cd repo-workspace
           
           git init
-          git remote add origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/opendatahub-io/kc-rep
+          git remote add origin https://github.com/opendatahub-io/kc-rep
           git fetch origin
           
           if git ls-remote --exit-code --heads origin "$branch_name" > /dev/null; then
@@ -95,7 +99,11 @@ jobs:
           git commit -m "Update Tekton output-image tags to version ${{ inputs.version }}"
           git push origin "$branch_name"
 
-
+      - name: Authenticate gh CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${GITHUB_TOKEN}" | gh auth login --with-token
 
       - name: Create Pull Request
         env:
