@@ -60,7 +60,7 @@ jobs:
 
       - name: Create branch and commit updates
         run: |
-          branch_name="tekton-update-v2.x.1"
+          branch_name="tekton-update-${{ inputs.version }}"
           mkdir repo-workspace
           cd repo-workspace
           
@@ -68,7 +68,6 @@ jobs:
           git remote add origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/opendatahub-io/kc-rep
           git fetch origin
           
-          # Check if branch already exists remotely
           if git ls-remote --exit-code --heads origin "$branch_name" > /dev/null; then
             echo "Branch $branch_name exists remotely. Checking it out."
             git checkout -b "$branch_name" origin/"$branch_name"
@@ -78,15 +77,24 @@ jobs:
           fi
           
           mkdir -p .tekton
-          cp -r ../extracted/.tekton/* .tekton/
-          
+          rsync -av --delete ../extracted/.tekton/ .tekton/
+      
+          echo "--- Git Status After Copy ---"
+          git status
+          echo "--- Git Diff After Copy ---"
+          git diff
+      
+          if git diff --quiet; then
+            echo "No changes detected. Exiting."
+            exit 0
+          fi
+      
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .tekton
-          git commit -m "Update Tekton output-image tags to version v2.x.1"
-          
-          # Push the branch (force push only if necessary)
+          git commit -m "Update Tekton output-image tags to version ${{ inputs.version }}"
           git push origin "$branch_name"
+
 
 
       - name: Create Pull Request
