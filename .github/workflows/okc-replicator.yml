@@ -34,7 +34,7 @@ jobs:
       repository-projects: write
       
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout OKC repository
@@ -98,7 +98,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          unset GH_TOKEN
           echo "${GITHUB_TOKEN}" | gh auth login --with-token
+
       - name: Create Pull Request
         env:
           REPO: ${{ inputs.repository }}
